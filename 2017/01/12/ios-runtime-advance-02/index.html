@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=6.7.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.7.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.7.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.7.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.7.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '6.7.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="objc_msgSend函数当某个对象使用语法[receiver message]来调用某个方法时，其实[receiver message]被编译器转化为: 1id objc_msgSend ( id self, SEL op, ... ); 现在让我们看一下objc_msgSend它具体是如何发送消息:  首先根据receiver对象的isa指针获取它对应的class 优先在class的cach">
+<meta name="keywords" content="ios,runtime,oc,cache">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iOS RunTime Advance 02 (方法缓存详解)">
+<meta property="og:url" content="https://eternityi.github.io/2017/01/12/ios-runtime-advance-02/index.html">
+<meta property="og:site_name" content="App Development Club">
+<meta property="og:description" content="objc_msgSend函数当某个对象使用语法[receiver message]来调用某个方法时，其实[receiver message]被编译器转化为: 1id objc_msgSend ( id self, SEL op, ... ); 现在让我们看一下objc_msgSend它具体是如何发送消息:  首先根据receiver对象的isa指针获取它对应的class 优先在class的cach">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-01-10T09:31:14.332Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="iOS RunTime Advance 02 (方法缓存详解)">
+<meta name="twitter:description" content="objc_msgSend函数当某个对象使用语法[receiver message]来调用某个方法时，其实[receiver message]被编译器转化为: 1id objc_msgSend ( id self, SEL op, ... ); 现在让我们看一下objc_msgSend它具体是如何发送消息:  首先根据receiver对象的isa指针获取它对应的class 优先在class的cach">
+
+
+
+
+
+
+  <link rel="canonical" href="https://eternityi.github.io/2017/01/12/ios-runtime-advance-02/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>iOS RunTime Advance 02 (方法缓存详解) | App Development Club</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">App Development Club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">ADC</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+    
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://eternityi.github.io/2017/01/12/ios-runtime-advance-02/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="eternityi">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="App Development Club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">iOS RunTime Advance 02 (方法缓存详解)
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2017-01-12 16:01" itemprop="dateCreated datePublished" datetime="2017-01-12T16:01:10+08:00">2017-01-12</time>
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="objc-msgSend函数"><a href="#objc-msgSend函数" class="headerlink" title="objc_msgSend函数"></a>objc_msgSend函数</h2><p>当某个对象使用语法<code>[receiver message]</code>来调用某个方法时，其实<code>[receiver message]</code>被编译器转化为:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">id <span class="title">objc_msgSend</span> <span class="params">( id self, SEL op, ... )</span></span>;</span><br></pre></td></tr></table></figure>
+<p>现在让我们看一下objc_msgSend它具体是如何发送消息:</p>
+<ol>
+<li>首先根据<code>receiver</code>对象的isa指针获取它对应的<code>class</code></li>
+<li><strong>优先在<code>class</code>的<code>cache</code>查找<code>message</code>方法</strong>，如果找不到，再到<code>methodLists</code>查找</li>
+<li>如果没有在<code>class</code>找到，再到<code>super_class</code>查找</li>
+<li>一旦找到<code>message</code>这个方法，就执行它实现的IMP</li>
+</ol>
+<p>我们都知道Objective-C的方法决议是动态的，但是在底层一个方法究竟是怎么找到的，方法缓存又是怎么运作的却鲜为人知。本文主要从源码角度探究了Objective-C在runtime层的方法决议（<code>Method resolving</code>）过程和方法缓存（<code>Method cache</code>）的实现。</p>
+<p>我们来看下<code>runtime</code>层<code>objc_msgSend</code>的源码。<br>在<code>objc-msg-arm.s</code>中，<code>objc_msgSend</code>的代码如下：<br><em>（ps：Apple为了高度优化objc_msgSend的性能，这个文件是汇编写成的，不过即使我们不懂汇编，详尽的注释也可以让我们一窥其真面目）</em></p>
+<figure class="highlight mipsasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">ENTRY objc_msgSend</span><br><span class="line"><span class="comment"># check whether receiver is nil</span></span><br><span class="line"><span class="keyword">teq </span>    <span class="built_in">a1</span>, <span class="comment">#0</span></span><br><span class="line">    <span class="keyword">beq </span>    LMsgSendNilReceiver</span><br><span class="line"></span><br><span class="line"><span class="comment"># save registers and load receiver's class for CacheLookup</span></span><br><span class="line">stmfd   <span class="built_in">sp</span>!, &#123;<span class="built_in">a4</span>,<span class="built_in">v1</span>&#125;</span><br><span class="line">ldr     <span class="built_in">v1</span>, [<span class="built_in">a1</span>, <span class="comment">#ISA]</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># receiver is non-nil: search the cache</span></span><br><span class="line"><span class="keyword">CacheLookup </span><span class="built_in">a2</span>, <span class="built_in">v1</span>, LMsgSendCacheMiss</span><br><span class="line"></span><br><span class="line"><span class="comment"># cache hit (imp in ip) and CacheLookup returns with nonstret (eq) set, restore registers and call</span></span><br><span class="line">ldmfd   <span class="built_in">sp</span>!, &#123;<span class="built_in">a4</span>,<span class="built_in">v1</span>&#125;</span><br><span class="line"><span class="keyword">bx </span>     ip</span><br><span class="line"></span><br><span class="line"><span class="comment"># cache miss: go search the method lists</span></span><br><span class="line"><span class="symbol">LMsgSendCacheMiss:</span></span><br><span class="line">ldmfd <span class="built_in">sp</span>!, &#123;<span class="built_in">a4</span>,<span class="built_in">v1</span>&#125;</span><br><span class="line"><span class="keyword">b </span>_objc_msgSend_uncached</span><br><span class="line"></span><br><span class="line"><span class="symbol">LMsgSendNilReceiver:</span></span><br><span class="line">    mov     <span class="built_in">a2</span>, <span class="comment">#0</span></span><br><span class="line">    <span class="keyword">bx </span>     lr</span><br><span class="line"></span><br><span class="line"><span class="symbol">LMsgSendExit:</span></span><br><span class="line">END_ENTRY objc_msgSend</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">STATIC_ENTRY objc_msgSend_uncached</span><br><span class="line"></span><br><span class="line"><span class="comment"># Push stack frame</span></span><br><span class="line">stmfd <span class="built_in">sp</span>!, &#123;<span class="built_in">a1</span>-<span class="built_in">a4</span>,r7,lr&#125;</span><br><span class="line"><span class="keyword">add </span>    r7, <span class="built_in">sp</span>, <span class="comment">#16</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Load class and selector</span></span><br><span class="line">ldr <span class="built_in">a3</span>, [<span class="built_in">a1</span>, <span class="comment">#ISA] /* class = receiver-&gt;isa  */</span></span><br><span class="line"><span class="comment">/* selector already in a2 */</span></span><br><span class="line"><span class="comment">/* receiver already in a1 */</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Do the lookup</span></span><br><span class="line">MI_CALL_EXTERNAL(__class_lookupMethodAndLoadCache3)</span><br><span class="line"><span class="keyword">MOVE </span>   ip, <span class="built_in">a1</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Prep for forwarding, Pop stack frame and call imp</span></span><br><span class="line"><span class="keyword">teq </span><span class="built_in">v1</span>, <span class="built_in">v1</span> <span class="comment">/* set nonstret (eq) */</span></span><br><span class="line">ldmfd <span class="built_in">sp</span>!, &#123;<span class="built_in">a1</span>-<span class="built_in">a4</span>,r7,lr&#125;</span><br><span class="line"><span class="keyword">bx </span>ip</span><br></pre></td></tr></table></figure>
+<p>从上述代码中可以看到，<code>objc_msgSend</code>（就arm平台而言）的消息分发分为以下几个步骤：</p>
+<ul>
+<li>判断<code>receiver</code>是否为<code>nil</code>，也就是<code>objc_msgSend</code>的第一个参数<code>self</code>，也就是要调用的那个方法所属对象</li>
+<li>从缓存里寻找，找到了则分发，否则</li>
+<li>利用<code>objc-class.mm</code>中<code>_class_lookupMethodAndLoadCache3</code>方法去寻找<code>selector</code><ul>
+<li>如果支持GC，忽略掉非GC环境的方法（<code>retain</code>等）</li>
+<li>从本<code>class</code>的<code>method list</code>寻找<code>selector</code>，如果找到，填充到缓存中，并返回<code>selector</code>，否则</li>
+<li>寻找父类的<code>method list</code>，并依次往上寻找，直到找到<code>selector</code>，填充到缓存中，并返回<code>selector</code>，否则</li>
+<li>调用<code>_class_resolveMethod</code>，如果可以动态<code>resolve</code>为一个<code>selector</code>，不缓存，方法返回，否则</li>
+<li>转发这个<code>selector</code>，否则</li>
+</ul>
+</li>
+<li>报错，抛出异常</li>
+</ul>
+<h2 id="objc-cache-缓存"><a href="#objc-cache-缓存" class="headerlink" title="objc_cache(缓存)"></a>objc_cache(缓存)</h2><p>在objc-cache.mm中，objc_cache的定义如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">objc_cache</span> &#123;</span></span><br><span class="line">    <span class="keyword">uintptr_t</span> mask;            <span class="comment">/* total = mask + 1 */</span></span><br><span class="line">    <span class="keyword">uintptr_t</span> occupied;       </span><br><span class="line">    cache_entry *buckets[<span class="number">1</span>];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>它包含了下面三个变量：</p>
+<ol>
+<li><code>mask</code>：可以认为是当前能达到的最大<code>index</code>（从0开始的），所以缓存的<code>size（total）</code>是<code>mask+1</code></li>
+<li><code>occupied</code>：被占用的槽位，因为缓存是以散列表的形式存在的，所以会有空槽，而<code>occupied</code>表示当前被占用的数目</li>
+<li><code>buckets</code>：用数组表示的hash表，<code>cache_entry</code>类型，每一个<code>cache_entry</code>代表一个方法缓存(<code>buckets</code>定义在<code>objc_cache</code>的最后，说明这是一个可变长度的数组)<br>而<code>cache_entry</code>的定义如下：</li>
+</ol>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    SEL name;     <span class="comment">// same layout as struct old_method</span></span><br><span class="line">    <span class="keyword">void</span> *unused;</span><br><span class="line">    IMP imp;  <span class="comment">// same layout as struct old_method</span></span><br><span class="line">&#125; cache_entry;</span><br></pre></td></tr></table></figure>
+<p>很明显通过 <code>SEL</code> 和 <code>IMP</code> 就可以调用缓存的方法了。</p>
+<h2 id="缓存和散列"><a href="#缓存和散列" class="headerlink" title="缓存和散列"></a>缓存和散列</h2><p>缓存的存储使用了散列表。<br>为什么要用散列表呢？因为散列表检索起来更快（<em>时间复杂度往往是O(1)</em>）</p>
+<h3 id="插入缓存"><a href="#插入缓存" class="headerlink" title="插入缓存"></a>插入缓存</h3><p>我们来看下是方法缓存如何散列和检索的：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/***********************************************************************</span></span><br><span class="line"><span class="comment">* _cache_fill.  Add the specified method to the specified class' cache.</span></span><br><span class="line"><span class="comment">* Returns NO if the cache entry wasn't added: cache was busy, </span></span><br><span class="line"><span class="comment">*  class is still being initialized, new entry is a duplicate.</span></span><br><span class="line"><span class="comment">* _cache_fill 添加特定的方法到特定的类缓存中，cache entry没有添加的话返回NO：缓存busy、类还在初始化、entry和已有的entry重复。</span></span><br><span class="line"><span class="comment">* </span></span><br><span class="line"><span class="comment">* Called only from _class_lookupMethodAndLoadCache and</span></span><br><span class="line"><span class="comment">* class_respondsToMethod and _cache_addForwardEntry.</span></span><br><span class="line"><span class="comment">* 只有以上三个函数调用后，才会调用</span></span><br><span class="line"><span class="comment">* </span></span><br><span class="line"><span class="comment">* Cache locks: cacheUpdateLock must not be held.</span></span><br><span class="line"><span class="comment">**********************************************************************/</span></span><br><span class="line"><span class="keyword">bool</span> _cache_fill(Class cls, Method smt, SEL sel)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">uintptr_t</span> newOccupied;</span><br><span class="line">    <span class="keyword">uintptr_t</span> index;</span><br><span class="line">    cache_entry **buckets;</span><br><span class="line">    cache_entry *entry;</span><br><span class="line">    Cache cache;</span><br><span class="line"></span><br><span class="line">    cacheUpdateLock.assertUnlocked();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Never cache before +initialize is done</span></span><br><span class="line">    <span class="keyword">if</span> (!cls-&gt;isInitialized()) &#123;</span><br><span class="line">        <span class="keyword">return</span> NO;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Keep tally of cache additions</span></span><br><span class="line">    totalCacheFills += <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">mutex_locker_t</span> lock(cacheUpdateLock);</span><br><span class="line"></span><br><span class="line">    entry = (cache_entry *)smt;</span><br><span class="line"></span><br><span class="line">    cache = cls-&gt;cache;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Make sure the entry wasn't added to the cache by some other thread </span></span><br><span class="line">    <span class="comment">// before we grabbed the cacheUpdateLock.</span></span><br><span class="line">    <span class="comment">// Don't use _cache_getMethod() because _cache_getMethod() doesn't </span></span><br><span class="line">    <span class="comment">// return forward:: entries.</span></span><br><span class="line">    <span class="keyword">if</span> (_cache_getImp(cls, sel)) &#123;</span><br><span class="line">        <span class="keyword">return</span> NO; <span class="comment">// entry is already cached, didn't add new one</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Use the cache as-is if it is less than 3/4 full</span></span><br><span class="line">    newOccupied = cache-&gt;occupied + <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">if</span> ((newOccupied * <span class="number">4</span>) &lt;= (cache-&gt;mask + <span class="number">1</span>) * <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="comment">// Cache is less than 3/4 full.</span></span><br><span class="line">        cache-&gt;occupied = (<span class="keyword">unsigned</span> <span class="keyword">int</span>)newOccupied;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// Cache is too full. Expand it.</span></span><br><span class="line">        cache = _cache_expand (cls);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Account for the addition</span></span><br><span class="line">        cache-&gt;occupied += <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 往方法缓存里存放一个方法</span></span><br><span class="line">    <span class="comment">// Scan for the first unused slot and insert there. 查找第一个空槽，插入</span></span><br><span class="line">    <span class="comment">// There is guaranteed to be an empty slot because the </span></span><br><span class="line">    <span class="comment">// minimum size is 4 and we resized at 3/4 full.</span></span><br><span class="line">    buckets = (cache_entry **)cache-&gt;buckets;</span><br><span class="line">    <span class="keyword">for</span> (index = CACHE_HASH(sel, cache-&gt;mask); </span><br><span class="line">         buckets[index] != <span class="literal">NULL</span>; </span><br><span class="line">         index = (index+<span class="number">1</span>) &amp; cache-&gt;mask)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">// empty</span></span><br><span class="line">    &#125;</span><br><span class="line">    buckets[index] = entry;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> YES; <span class="comment">// successfully added new cache entry</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这是往方法缓存里存放一个方法的代码（<code>cache fill</code>），我们可以看到<code>sel</code>被散列后找到一个空槽放在<code>buckets</code>中，而<code>CACHE_HASH</code>的定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> CACHE_HASH(sel, mask) (((uintptr_t)(sel)&gt;&gt;2) &amp; (mask))</span></span><br></pre></td></tr></table></figure>
+<p>这段代码就是利用了sel的指针地址和mask做了一下简单计算得出的。</p>
+<h3 id="查找缓存"><a href="#查找缓存" class="headerlink" title="查找缓存"></a>查找缓存</h3><p>从散列表取缓存则是利用汇编语言写成的（是为了高度优化<code>objc_msgSend</code>而使用汇编的）。我们看<code>objc-msg-arm.mm</code> 里面的<code>CacheLookup</code>方法：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">.macro CacheLookup <span class="comment">/* selReg, classReg, missLabel */</span></span><br><span class="line"></span><br><span class="line"> MOVE r9, $<span class="number">0</span>, LSR #<span class="number">2</span>          <span class="comment">/* index = (sel &gt;&gt; 2) */</span></span><br><span class="line"> ldr     a4, [$<span class="number">1</span>, #CACHE]        <span class="comment">/* cache = class-&gt;cache */</span></span><br><span class="line"> add     a4, a4, #BUCKETS        <span class="comment">/* buckets = &amp;cache-&gt;buckets */</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* search the cache */</span></span><br><span class="line"><span class="comment">/* a1=receiver, a2 or a3=sel, r9=index, a4=buckets, $1=method */</span></span><br><span class="line"><span class="number">1</span>:</span><br><span class="line"> ldr     ip, [a4, #NEGMASK]      <span class="comment">/* mask = cache-&gt;mask */</span></span><br><span class="line"> <span class="keyword">and</span>     r9, r9, ip              <span class="comment">/* index &amp;= mask           */</span></span><br><span class="line"> ldr     $<span class="number">1</span>, [a4, r9, LSL #<span class="number">2</span>]    <span class="comment">/* method = buckets[index] */</span></span><br><span class="line"> teq     $<span class="number">1</span>, #<span class="number">0</span>                  <span class="comment">/* if (method == NULL)     */</span></span><br><span class="line"> add     r9, r9, #<span class="number">1</span>              <span class="comment">/* index++                 */</span></span><br><span class="line"> beq     $<span class="number">2</span>                      <span class="comment">/*     goto cacheMissLabel */</span></span><br><span class="line"></span><br><span class="line"> ldr     ip, [$<span class="number">1</span>, #METHOD_NAME]  <span class="comment">/* load method-&gt;method_name        */</span></span><br><span class="line"> teq     $<span class="number">0</span>, ip                  <span class="comment">/* if (method-&gt;method_name != sel) */</span></span><br><span class="line"> bne     <span class="number">1b</span>                      <span class="comment">/*     retry                       */</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* cache hit, $1 == method triplet address */</span></span><br><span class="line"><span class="comment">/* Return triplet in $1 and imp in ip      */</span></span><br><span class="line"> ldr     ip, [$<span class="number">1</span>, #METHOD_IMP]   <span class="comment">/* imp = method-&gt;method_imp */</span></span><br><span class="line"></span><br><span class="line">.endmacro</span><br></pre></td></tr></table></figure>
+<p>先求hash，去buckets里找，找不到按照hash冲突的规则继续向下，直到最后。</p>
+<h3 id="特殊方法"><a href="#特殊方法" class="headerlink" title="特殊方法"></a>特殊方法</h3><p>为什么会有<code>_class_lookupMethodAndLoadCache3</code>这个方法？<br>这个方法的实现如下所示：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/***********************************************************************</span></span><br><span class="line"><span class="comment">* _class_lookupMethodAndLoadCache.</span></span><br><span class="line"><span class="comment">* Method lookup for dispatchers ONLY. OTHER CODE SHOULD USE lookUpImp().</span></span><br><span class="line"><span class="comment">* This lookup avoids optimistic cache scan because the dispatcher</span></span><br><span class="line"><span class="comment">* already tried that.</span></span><br><span class="line"><span class="comment">**********************************************************************/</span></span><br><span class="line">IMP _class_lookupMethodAndLoadCache3(id obj, SEL sel, Class cls)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> lookUpImpOrForward(cls, sel, obj, </span><br><span class="line">                              YES<span class="comment">/*initialize*/</span>, NO<span class="comment">/*cache*/</span>, YES<span class="comment">/*resolver*/</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果单纯看方法名，这个方法应该会从缓存和方法列表中查找一个方法，但是如第一节所讲，在调用这个方法之前，我们已经是从缓存无法找到这个方法了，所以这个方法避免了再去扫描缓存查找方法的过程，而是直接从方法列表找起。从Apple代码的注释，我们也完全可以了解这一点。不顾一切地追求完美和性能，是一种品质。</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/configs/alipay-reward-image.JPG" alt="eternityi 支付宝">
+        <p>支付宝</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ios/" rel="tag"># ios</a>
+          
+            <a href="/tags/runtime/" rel="tag"># runtime</a>
+          
+            <a href="/tags/oc/" rel="tag"># oc</a>
+          
+            <a href="/tags/cache/" rel="tag"># cache</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/01/10/ios-runtime-advance-01/" rel="next" title="iOS RuntTime Advance 01">
+                <i class="fa fa-chevron-left"></i> iOS RuntTime Advance 01
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/10/09/swift-algorithems-basic-01/" rel="prev" title="Swift 算法基础+实践 01">
+                Swift 算法基础+实践 01 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="gitalk-container">
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/avatar.png" alt="eternityi">
+            
+              <p class="site-author-name" itemprop="name">eternityi</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">8</span>
+                    <span class="site-state-item-name">标签</span>
+                  
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="https://github.com/eternityi" title="GitHub &rarr; https://github.com/eternityi" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="mailto:eternity.zheng@gmail.com" title="E-Mail &rarr; mailto:eternity.zheng@gmail.com" rel="noopener" target="_blank"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            </div>
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#objc-msgSend函数"><span class="nav-number">1.</span> <span class="nav-text">objc_msgSend函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#objc-cache-缓存"><span class="nav-number">2.</span> <span class="nav-text">objc_cache(缓存)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#缓存和散列"><span class="nav-number">3.</span> <span class="nav-text">缓存和散列</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#插入缓存"><span class="nav-number">3.1.</span> <span class="nav-text">插入缓存</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#查找缓存"><span class="nav-number">3.2.</span> <span class="nav-text">查找缓存</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#特殊方法"><span class="nav-number">3.3.</span> <span class="nav-text">特殊方法</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2014 – <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">eternityi</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> v6.7.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    
+    
+  
+  <script color="0,0,255" opacity="0.5" zindex="-1" count="99" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.7.0"></script>
+
+  <script src="/js/src/motion.js?v=6.7.0"></script>
+
+
+
+  
+  
+
+  
+  <script src="/js/src/scrollspy.js?v=6.7.0"></script>
+<script src="/js/src/post-details.js?v=6.7.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.7.0"></script>
+
+
+
+  
+  
+    
+
+<script src="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+
+
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+
+
+<script src="//cdn.jsdelivr.net/npm/js-md5@0.7.3/src/md5.min.js"></script>
+
+<script>
+  var gitalk = new Gitalk({
+    clientID: 'cbfa8cc6c6d4e215dcee',
+    clientSecret: 'ee6586236b45fa7609f98d92c1da655a8c8f1ede',
+    repo: 'blog-comments',
+    owner: 'eternityi',
+    admin: ['eternityi'],
+    id: md5(location.pathname),
+    distractionFreeMode: 'true'
+  });
+  gitalk.render('gitalk-container');
+</script>
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  <style>
+    .copy-btn {
+      display: inline-block;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 20px;
+      color: #333;
+      white-space: nowrap;
+      vertical-align: middle;
+      cursor: pointer;
+      background-color: #eee;
+      background-image: linear-gradient(#fcfcfc, #eee);
+      border: 1px solid #d5d5d5;
+      border-radius: 3px;
+      user-select: none;
+      outline: 0;
+    }
+
+    .highlight-wrap .copy-btn {
+      transition: opacity .3s ease-in-out;
+      opacity: 0;
+      padding: 2px 6px;
+      position: absolute;
+      right: 4px;
+      top: 8px;
+    }
+
+    .highlight-wrap:hover .copy-btn,
+    .highlight-wrap .copy-btn:focus {
+      opacity: 1
+    }
+
+    .highlight-wrap {
+      position: relative;
+    }
+  </style>
+  <script>
+    $('.highlight').each(function (i, e) {
+      var $wrap = $('<div>').addClass('highlight-wrap');
+      $(e).after($wrap);
+      $wrap.append($('<button>').addClass('copy-btn').append('复制').on('click', function (e) {
+        var code = $(this).parent().find('.code').find('.line').map(function (i, e) {
+          return $(e).text();
+        }).toArray().join('\n');
+        var ta = document.createElement('textarea');
+        var range = document.createRange(); //For Chrome
+        var sel = window.getSelection(); //For Chrome
+        var yPosition = window.pageYOffset || document.documentElement.scrollTop;
+        ta.style.top = yPosition + 'px'; //Prevent page scroll
+        ta.style.position = 'absolute';
+        ta.style.opacity = '0';
+        ta.value = code;
+        ta.textContent = code; //For FireFox
+        ta.contentEditable = true;
+        ta.readOnly = false;
+        document.body.appendChild(ta);
+        range.selectNode(ta);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        ta.setSelectionRange(0, code.length);
+        var result = document.execCommand('copy');
+        
+          if (result) $(this).text('复制成功');
+          else $(this).text('复制失败');
+        
+        ta.blur(); //For iOS
+        $(this).blur();
+      })).on('mouseleave', function (e) {
+        var $b = $(this).find('.copy-btn');
+        setTimeout(function () {
+          $b.text('复制');
+        }, 300);
+      }).append(e);
+    })
+  </script>
+
+
+  
+
+</body>
+</html>
