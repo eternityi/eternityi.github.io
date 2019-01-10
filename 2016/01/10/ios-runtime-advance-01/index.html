@@ -103,7 +103,7 @@
 <meta property="og:description" content="RunTime一直是iOS开发中非常重要的而且必须要理解的东西，最近在学习RunTime，有自己的一些心得，现在记录下来，便于以后查阅理解 Objective-C 的 Runtime 机制可以帮我们更好的了解OC语言，适当的时候还能对语言进行扩展，从系统层面解决项目中的一些设计或技术问题。 什么是RunTime Objective-C 扩展了 C 语言，并加入了面向对象特性和 Smalltalk">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://eternityi.github.io/2016/01/10/ios-runtime-advance-01/isa_superclass_pointer.png">
-<meta property="og:updated_time" content="2019-01-10T04:06:50.618Z">
+<meta property="og:updated_time" content="2019-01-10T04:12:41.484Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="iOS RunTime Advance 01">
 <meta name="twitter:description" content="RunTime一直是iOS开发中非常重要的而且必须要理解的东西，最近在学习RunTime，有自己的一些心得，现在记录下来，便于以后查阅理解 Objective-C 的 Runtime 机制可以帮我们更好的了解OC语言，适当的时候还能对语言进行扩展，从系统层面解决项目中的一些设计或技术问题。 什么是RunTime Objective-C 扩展了 C 语言，并加入了面向对象特性和 Smalltalk">
@@ -415,7 +415,7 @@
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">objc_class</span> :</span> objc_object &#123;</span><br><span class="line">    <span class="comment">// Class ISA;</span></span><br><span class="line">    Class superclass;</span><br><span class="line">    <span class="keyword">cache_t</span> cache;             <span class="comment">// formerly cache pointer and vtable</span></span><br><span class="line">    <span class="keyword">class_data_bits_t</span> bits;    <span class="comment">// class_rw_t * plus custom rr/alloc flags</span></span><br><span class="line"></span><br><span class="line">    ......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>由此可见，结构体objc_class也是继承objc_object，说明<strong>Class在设计中本身也是一个对象</strong>。</p>
 <p>其实<code>Meta Class</code>也是一个<code>Class</code>，那么它也跟其他<code>Class</code>一样有自己的<code>isa</code>和<code>super_class</code>指针，使用它们可以确定一个类或者对象所属的类型：</p>
-<p><img src="isa_superclass_pointer.png" alt="Class isa and superclass relationship"></p>
+<img src="/2016/01/10/ios-runtime-advance-01/isa_superclass_pointer.png" title="Class isa and superclass relationship">
 <p>上图实线是<code>super_class</code>指针，虚线是<code>isa</code>指针。有几个关键点需要解释以下:</p>
 <ul>
 <li>Root class (class)其实就是NSObject，NSObject是没有超类的，所以Root class(class)的superclass指向nil。</li>
