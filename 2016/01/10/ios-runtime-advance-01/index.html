@@ -94,21 +94,27 @@
 
 
 
-  <meta name="keywords" content="app, ios, android, swift, kotlin">
-<meta property="og:type" content="website">
-<meta property="og:title" content="App Development Club">
-<meta property="og:url" content="https://eternityi.github.io/index.html">
+  <meta name="description" content="RunTime一直是iOS开发中非常重要的而且必须要理解的东西，最近在学习RunTime，有自己的一些心得，现在记录下来，便于以后查阅理解 Objective-C 的 Runtime 机制可以帮我们更好的了解OC语言，适当的时候还能对语言进行扩展，从系统层面解决项目中的一些设计或技术问题。 什么是RunTime Objective-C 扩展了 C 语言，并加入了面向对象特性和 Smalltalk">
+<meta name="keywords" content="ios,runtime,oc">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iOS RunTime Advance 01">
+<meta property="og:url" content="https://eternityi.github.io/2016/01/10/ios-runtime-advance-01/index.html">
 <meta property="og:site_name" content="App Development Club">
+<meta property="og:description" content="RunTime一直是iOS开发中非常重要的而且必须要理解的东西，最近在学习RunTime，有自己的一些心得，现在记录下来，便于以后查阅理解 Objective-C 的 Runtime 机制可以帮我们更好的了解OC语言，适当的时候还能对语言进行扩展，从系统层面解决项目中的一些设计或技术问题。 什么是RunTime Objective-C 扩展了 C 语言，并加入了面向对象特性和 Smalltalk">
 <meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://eternityi.github.io/2016/01/10/ios-runtime-advance-01/isa_superclass_pointer.png">
+<meta property="og:updated_time" content="2019-01-10T04:06:50.618Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="App Development Club">
+<meta name="twitter:title" content="iOS RunTime Advance 01">
+<meta name="twitter:description" content="RunTime一直是iOS开发中非常重要的而且必须要理解的东西，最近在学习RunTime，有自己的一些心得，现在记录下来，便于以后查阅理解 Objective-C 的 Runtime 机制可以帮我们更好的了解OC语言，适当的时候还能对语言进行扩展，从系统层面解决项目中的一些设计或技术问题。 什么是RunTime Objective-C 扩展了 C 语言，并加入了面向对象特性和 Smalltalk">
+<meta name="twitter:image" content="https://eternityi.github.io/2016/01/10/ios-runtime-advance-01/isa_superclass_pointer.png">
 
 
 
 
 
 
-  <link rel="canonical" href="https://eternityi.github.io/">
+  <link rel="canonical" href="https://eternityi.github.io/2016/01/10/ios-runtime-advance-01/">
 
 
 
@@ -118,7 +124,7 @@
   };
 </script>
 
-  <title>App Development Club</title>
+  <title>iOS RunTime Advance 01 | App Development Club</title>
   
 
 
@@ -166,8 +172,7 @@
     
   
 
-  <div class="container sidebar-position-left 
-  page-home">
+  <div class="container sidebar-position-left page-post-detail">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
@@ -209,7 +214,7 @@
         
         
           
-          <li class="menu-item menu-item-home menu-item-active">
+          <li class="menu-item menu-item-home">
 
     
     
@@ -288,181 +293,9 @@
           
           <div id="content" class="content">
             
-  <section id="posts" class="posts-expand">
+
+  <div id="posts" class="posts-expand">
     
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://eternityi.github.io/2017/10/09/swift-algorithems-basic-01/">
-
-    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="eternityi">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="App Development Club">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                
-                <a href="/2017/10/09/swift-algorithems-basic-01/" class="post-title-link" itemprop="url">Swift 算法基础+实践 01</a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-
-            
-            
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-
-              
-                
-              
-
-              <time title="创建时间：2017-10-09 15:42" itemprop="dateCreated datePublished" datetime="2017-10-09T15:42:38+08:00">2017-10-09</time>
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p><em>原文链接</em>:  <a href="https://eternityi.github.io/&lt;!--￼3--">https://eternityi.github.io/2017/10/09/swift-algorithems-basic-01/</a></p>
-<h2 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h2><ul>
-<li>数组 Array</li>
-<li>堆栈、队列 Stack/Queue</li>
-<li>优先队列（堆） Priority Queue(heap)</li>
-<li>链表（单链表/双向链表）LinkedList(single/double)</li>
-<li>树、二叉树 Tree/BinaryTree</li>
-<li>二叉搜索树 Binary Search Tree</li>
-<li>哈希表 HashTable</li>
-<li>集合 Disjoint Set</li>
-<li>前缀树 Trie Tree</li>
-<li>布隆过滤器 BloomFilter</li>
-<li>LRU Cache</li>
-</ul>
-<p>分析常见的数据结构，以及这些数据结构在Swift、Objective-C的使用。</p>
-<p>更重要的是实际应用，关于应用每篇文章会从两个方面来进行研究：</p>
-<ul>
-<li><strong>涉及使用这些基本数据结构解决常见的一些问题</strong></li>
-<li><strong>iOS/macOS SDK中对这些数据结构的实现和优化</strong></li>
-</ul>
-<h2 id="算法复杂度"><a href="#算法复杂度" class="headerlink" title="算法复杂度"></a>算法复杂度</h2><p>Big O Notation</p>
-<ul>
-<li><strong>O(1)</strong>: Constant Complexity: 常数复杂度</li>
-<li><strong>O(log n)</strong>: Logarithmic Complexity: 对数复杂度</li>
-<li><strong>O(n)</strong>: Linear Complexity: 线性时间复杂度</li>
-<li><strong>O(n^2)</strong>: N square Complexity 平⽅</li>
-<li><strong>O(n^3)</strong>: N square Complexity ⽴⽅方</li>
-<li><strong>O(2^n)</strong>: Exponential Growth 指数</li>
-<li><strong>O(n!)</strong>: Factorial 阶乘</li>
-</ul>
-<p><img src="different_approaches_of_big_o.png" alt="big o notation"></p>
-<h4 id="O-1-常数复杂度"><a href="#O-1-常数复杂度" class="headerlink" title="O(1) 常数复杂度"></a>O(1) 常数复杂度</h4><p>O(1)时间复杂度的算法执行的时间是固定时间，理论上，执行时间和算法的输入是<strong>无关的</strong>。<br>最常见的就是数组中元素的访问操作:</p>
-<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> arr = [<span class="number">1</span>, <span class="number">1</span>, <span class="number">3</span>, <span class="number">5</span>, <span class="number">8</span>];</span><br><span class="line">arr[<span class="number">2</span>]; <span class="comment">// =&gt; 3</span></span><br></pre></td></tr></table></figure>
-<p>类似的还有数组的 push() 和 pop() 操作</p>
-<h4 id="O-n-线性复杂度"><a href="#O-n-线性复杂度" class="headerlink" title="O(n) 线性复杂度"></a>O(n) 线性复杂度</h4><p>O(n)时间复杂度的算法，执行时间和算法接收的输入n的大小是相关的。<br>最常见的就是数组遍历：</p>
-<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (<span class="keyword">var</span> i = <span class="number">0</span>; i &lt; array.length; i++) &#123;</span><br><span class="line">  <span class="built_in">print</span>(array[i]);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-          
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-      
-    
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
 
   
 
@@ -494,10 +327,8 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">
-                
-                
-                <a href="/2016/01/10/ios-runtime-advance-01/" class="post-title-link" itemprop="url">iOS RunTime Advance 01</a>
+          <h1 class="post-title" itemprop="name headline">iOS RunTime Advance 01
+
               
             
           </h1>
@@ -556,9 +387,7 @@
       
 
       
-        
-          
-            <p><strong>RunTime一直是iOS开发中非常重要的而且必须要理解的东西，最近在学习RunTime，有自己的一些心得，现在记录下来，便于以后查阅</strong><br>理解 Objective-C 的 Runtime 机制可以帮我们更好的了解OC语言，适当的时候还能对语言进行扩展，从系统层面解决项目中的一些设计或技术问题。</p>
+        <p><strong>RunTime一直是iOS开发中非常重要的而且必须要理解的东西，最近在学习RunTime，有自己的一些心得，现在记录下来，便于以后查阅</strong><br>理解 Objective-C 的 Runtime 机制可以帮我们更好的了解OC语言，适当的时候还能对语言进行扩展，从系统层面解决项目中的一些设计或技术问题。</p>
 <h2 id="什么是RunTime"><a href="#什么是RunTime" class="headerlink" title="什么是RunTime"></a>什么是RunTime</h2><blockquote>
 <p>Objective-C 扩展了 C 语言，并加入了面向对象特性和 Smalltalk 式的消息传递机制。而这个扩展的核心是一个用 C 和 汇编 写的 Runtime 库。它是 Objective-C 面向对象和动态机制的基石。苹果和GNU各自维护一个开源的 runtime 版本，这两个版本之间都在努力的保持一致。</p>
 </blockquote>
@@ -625,8 +454,6 @@
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">objc_cache</span> *<span class="title">Cache</span>                             <span class="title">OBJC2_UNAVAILABLE</span>;</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">objc_cache</span> &#123;</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span> mask <span class="comment">/* total = mask + 1 */</span>                 OBJC2_UNAVAILABLE;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span> occupied                                    OBJC2_UNAVAILABLE;</span><br><span class="line">    Method buckets[<span class="number">1</span>]                                        OBJC2_UNAVAILABLE;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
 <p>Cache其实就是一个存储Method的链表，主要是为了优化方法调用的性能。当对象receiver调用方法message时，首先根据对象receiver的isa指针查找到它对应的类，然后在类的methodLists中搜索方法，如果没有找到，就使用super_class指针到父类中的methodLists查找，一旦找到就调用方法。如果没有找到，有可能消息转发，也可能忽略它。但这样查找方式效率太低，因为往往一个类大概只有20%的方法经常被调用，占总调用次数的80%。所以使用Cache来缓存经常调用的方法，当调用方法时，优先在Cache查找，如果没有找到，再到methodLists查找。</p>
 
-          
-        
       
     </div>
 
@@ -642,19 +469,69 @@
       
     
     
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/configs/alipay-reward-image.JPG" alt="eternityi 支付宝">
+        <p>支付宝</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
 
     
 
     <footer class="post-footer">
       
-
+        <div class="post-tags">
+          
+            <a href="/tags/ios/" rel="tag"># ios</a>
+          
+            <a href="/tags/runtime/" rel="tag"># runtime</a>
+          
+            <a href="/tags/oc/" rel="tag"># oc</a>
+          
+        </div>
       
 
       
+      
+      
 
       
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/10/09/swift-algorithems-basic-01/" rel="prev" title="Swift 算法基础+实践 01">
+                Swift 算法基础+实践 01 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
       
-        <div class="post-eof"></div>
+
+      
       
     </footer>
   </div>
@@ -664,14 +541,19 @@
   </article>
 
 
-    
-  </section>
-
-  
+  </div>
 
 
           </div>
           
+
+  
+    <div class="comments" id="gitalk-container">
+    </div>
+
+  
+
+
 
         </div>
         
@@ -692,8 +574,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <div class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <div class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
             
@@ -790,6 +681,23 @@
         </div>
       </div>
 
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#什么是RunTime"><span class="nav-number">1.</span> <span class="nav-text">什么是RunTime</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#消息传递——RunTime的核心"><span class="nav-number">2.</span> <span class="nav-text">消息传递——RunTime的核心</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#类和对象的结构"><span class="nav-number">3.</span> <span class="nav-text">类和对象的结构</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#对象-objc-object"><span class="nav-number">3.0.1.</span> <span class="nav-text">对象 objc_object</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#类-objc-class"><span class="nav-number">3.0.2.</span> <span class="nav-text">类 objc_class</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#isa"><span class="nav-number">3.0.2.0.1.</span> <span class="nav-text">isa</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#super-class"><span class="nav-number">3.0.2.0.2.</span> <span class="nav-text">super_class</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#name"><span class="nav-number">3.0.2.0.3.</span> <span class="nav-text">name</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#ivars"><span class="nav-number">3.0.2.0.4.</span> <span class="nav-text">ivars</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#methodLists"><span class="nav-number">3.0.2.0.5.</span> <span class="nav-text">methodLists</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#cache"><span class="nav-number">3.0.2.0.6.</span> <span class="nav-text">cache</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#protocols"><span class="nav-number">3.0.2.0.7.</span> <span class="nav-text">protocols</span></a></li></ol></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#方法"><span class="nav-number">4.</span> <span class="nav-text">方法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#SEL-objc-selector"><span class="nav-number">4.0.1.</span> <span class="nav-text">SEL(objc_selector)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IMP"><span class="nav-number">4.0.2.</span> <span class="nav-text">IMP</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Cache-objc-cache-缓存"><span class="nav-number">5.</span> <span class="nav-text">Cache(objc_cache) 缓存</span></a></li></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
       
 
       
@@ -918,6 +826,10 @@
   
 
   
+  <script src="/js/src/scrollspy.js?v=6.7.0"></script>
+<script src="/js/src/post-details.js?v=6.7.0"></script>
+
+
 
   
 
@@ -927,6 +839,34 @@
 
 
   
+  
+    
+
+<script src="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+
+
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+
+
+<script src="//cdn.jsdelivr.net/npm/js-md5@0.7.3/src/md5.min.js"></script>
+
+<script>
+  var gitalk = new Gitalk({
+    clientID: 'cbfa8cc6c6d4e215dcee',
+    clientSecret: 'ee6586236b45fa7609f98d92c1da655a8c8f1ede',
+    repo: 'blog-comments',
+    owner: 'eternityi',
+    admin: ['eternityi'],
+    id: md5(location.pathname),
+    distractionFreeMode: 'true'
+  });
+  gitalk.render('gitalk-container');
+</script>
+
+  
+
 
 
 
