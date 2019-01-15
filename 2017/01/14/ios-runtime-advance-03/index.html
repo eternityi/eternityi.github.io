@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=6.7.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.7.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.7.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.7.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.7.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '6.7.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="消息转发前文介绍了进行一次发送消息会在相关的类对象中搜索方法列表，如果找不到则会沿着继承树向上一直搜索直到继承树根部（通常为NSObject），如果还是找不到并且消息转发都失败了就回执行 doesNotRecognizeSelector: 方法报 unrecognized selector 错。 但在抛出异常之前，还有 三次机会 按以下顺序让你拯救程序:  Method Resolution 动态">
+<meta name="keywords" content="ios,runtime,oc">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iOS RunTime Advance 03 (消息转发)">
+<meta property="og:url" content="https://eternityi.github.io/2017/01/14/ios-runtime-advance-03/index.html">
+<meta property="og:site_name" content="App Development Club">
+<meta property="og:description" content="消息转发前文介绍了进行一次发送消息会在相关的类对象中搜索方法列表，如果找不到则会沿着继承树向上一直搜索直到继承树根部（通常为NSObject），如果还是找不到并且消息转发都失败了就回执行 doesNotRecognizeSelector: 方法报 unrecognized selector 错。 但在抛出异常之前，还有 三次机会 按以下顺序让你拯救程序:  Method Resolution 动态">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://eternityi.github.io/2017/01/14/ios-runtime-advance-03/message_forward.png">
+<meta property="og:updated_time" content="2019-01-15T07:43:10.624Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="iOS RunTime Advance 03 (消息转发)">
+<meta name="twitter:description" content="消息转发前文介绍了进行一次发送消息会在相关的类对象中搜索方法列表，如果找不到则会沿着继承树向上一直搜索直到继承树根部（通常为NSObject），如果还是找不到并且消息转发都失败了就回执行 doesNotRecognizeSelector: 方法报 unrecognized selector 错。 但在抛出异常之前，还有 三次机会 按以下顺序让你拯救程序:  Method Resolution 动态">
+<meta name="twitter:image" content="https://eternityi.github.io/2017/01/14/ios-runtime-advance-03/message_forward.png">
+
+
+
+
+
+
+  <link rel="canonical" href="https://eternityi.github.io/2017/01/14/ios-runtime-advance-03/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>iOS RunTime Advance 03 (消息转发) | App Development Club</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">App Development Club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">ADC</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+    
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://eternityi.github.io/2017/01/14/ios-runtime-advance-03/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="eternityi">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="App Development Club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">iOS RunTime Advance 03 (消息转发)
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2017-01-14 19:01" itemprop="dateCreated datePublished" datetime="2017-01-14T19:01:10+08:00">2017-01-14</time>
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="消息转发"><a href="#消息转发" class="headerlink" title="消息转发"></a>消息转发</h2><p>前文介绍了进行一次发送消息会在相关的类对象中搜索方法列表，如果找不到则会沿着继承树向上一直搜索直到<strong>继承树根部</strong>（通常为<code>NSObject</code>），如果还是找不到并且消息转发都失败了就回执行 <code>doesNotRecognizeSelector:</code> 方法报 <code>unrecognized selector</code> 错。</p>
+<p>但在抛出异常之前，还有 <strong>三次机会</strong> 按以下顺序让你拯救程序:</p>
+<ol>
+<li>Method Resolution 动态方法解析</li>
+<li>Fast Forwarding 备用接收者</li>
+<li>Normal Forwarding 完整消息转发</li>
+</ol>
+<p>消息转发流程简图：<br><img src="/2017/01/14/ios-runtime-advance-03/message_forward.png" title="Message Forward"></p>
+<h2 id="动态方法解析-Method-Resolution"><a href="#动态方法解析-Method-Resolution" class="headerlink" title="动态方法解析 Method Resolution"></a>动态方法解析 Method Resolution</h2><p>首先，OC运行时会调用 <code>+resolveInstanceMethod:</code>或者 <code>+resolveClassMethod:</code>，让你有机会提供一个函数实现。如果你添加了函数并返回<code>YES</code>， 那运行时系统就会重新启动一次消息发送的过程。</p>
+<p>实现一个动态方法解析的例子如下：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">Message</span> : <span class="title">NSObject</span></span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)sendMessage:(<span class="built_in">NSString</span> *)word;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">Message</span></span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)sendMessage:(<span class="built_in">NSString</span> *)word</span><br><span class="line">&#123;</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"normal way : send message = %@"</span>, word);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<p>如果创建<code>Message</code>对象并调用<code>sendMessage:</code>方法：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Message *message = [Message new];</span><br><span class="line">[message sendMessage:<span class="string">@"App Dev Club"</span>];</span><br></pre></td></tr></table></figure>
+<p>控制台会打印以下信息:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">normal way : send message = App Dev Club</span><br></pre></td></tr></table></figure>
+<p>但现在我将原来<code>sendMessage:</code>方法实现给注释掉，覆盖<code>resolveInstanceMethod:</code>方法：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#pragma mark - Method Resolution</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/// override resolveInstanceMethod or resolveClassMethod for changing sendMessage method implementation</span></span><br><span class="line">+ (<span class="built_in">BOOL</span>)resolveInstanceMethod:(SEL)sel</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">//形式1:</span></span><br><span class="line">    <span class="keyword">if</span> (sel == <span class="keyword">@selector</span>(sendMessage:)) &#123;</span><br><span class="line">        class_addMethod([<span class="keyword">self</span> <span class="keyword">class</span>], sel, imp_implementationWithBlock(^(<span class="keyword">id</span> <span class="keyword">self</span>, <span class="built_in">NSString</span> *word) &#123;</span><br><span class="line">            <span class="built_in">NSLog</span>(<span class="string">@"method resolution way : send message = %@"</span>, word);</span><br><span class="line">        &#125;), <span class="string">"v@*"</span>);</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">return</span> <span class="literal">YES</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//形式2:</span></span><br><span class="line">    <span class="keyword">if</span> (sel == <span class="keyword">@selector</span>(foo:)) &#123;<span class="comment">//如果是执行foo函数，就动态解析，指定新的IMP</span></span><br><span class="line">        class_addMethod([<span class="keyword">self</span> <span class="keyword">class</span>], sel, (IMP)fooMethod, <span class="string">"v@:"</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">YES</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> [<span class="keyword">super</span> resolveInstanceMethod:sel];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">void</span> forwardMethod(<span class="keyword">id</span> obj, SEL _cmd) &#123;</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"Doing foo"</span>);<span class="comment">//新函数</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>控制台就会打印以下信息：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">method resolution way : send message = App Dev Club</span><br></pre></td></tr></table></figure>
+<p>注意到上面代码有这样一个字符串<code>&quot;v@*&quot;</code>(<code>&quot;v@:&quot;</code>)，它表示方法的参数和返回值，详情参考 <a href="https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html#//apple_ref/doc/uid/TP40008048-CH100-SW1" target="_blank" rel="noopener">Type Encodings</a> </p>
+<p>可以看到虽然没有实现<code>sendMessage:</code>这个函数，但是我们通过<code>class_addMethod</code>动态添加函数，并执行这个函数的<code>IMP</code>。从结果看，成功实现了。<br>如果<code>resolve</code>方法返回 <code>NO</code> ，运行时就会移到下一步：<code>forwardingTargetForSelector</code>。</p>
+<h2 id="备用接收者-Fast-Forwarding"><a href="#备用接收者-Fast-Forwarding" class="headerlink" title="备用接收者 Fast Forwarding"></a>备用接收者 Fast Forwarding</h2><p>如果目标对象实现<code>- forwardingTargetForSelector:</code>方法，系统就会在运行时调用这个方法，只要这个方法返回的不是<code>nil</code>或<code>self</code>，也会重启消息发送的过程，把这消息<strong>转发给其他对象</strong>来处理。否则，就会继续<code>Normal Fowarding</code>。<br>继续上面<code>Message</code>类的例子，将<code>sendMessage:</code>和<code>resolveInstanceMethod:</code>方法注释掉，然后添加<code>forwardingTargetForSelector:</code>方法的实现：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#pragma mark - Fast Forwarding</span></span><br><span class="line">- (<span class="keyword">id</span>)forwardingTargetForSelector:(SEL)aSelector</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (aSelector == <span class="keyword">@selector</span>(sendMessage:)) &#123;</span><br><span class="line">        <span class="keyword">return</span> [MessageForwarding new];/返回一个新对象，让新对象接收这个消息</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> [<span class="keyword">super</span> forwardingTargetForSelector:aSelector];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>此时还缺一个转发消息的类<code>MessageForwarding</code>，这个类的设计与实现如下：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">MessageForwarding</span> : <span class="title">NSObject</span></span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)sendMessage:(<span class="built_in">NSString</span> *)word;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">MessageForwarding</span></span></span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)sendMessage:(<span class="built_in">NSString</span> *)word</span><br><span class="line">&#123;</span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"fast forwarding way : send message = %@"</span>, word);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<p>此时，控制台会打印以下信息：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">fast forwarding way : send message = App Dev Club</span><br></pre></td></tr></table></figure>
+<p>这里叫Fast，是因为这一步不会创建<code>NSInvocation</code>对象，但<code>Normal Forwarding</code>会创建它，所以更快点。</p>
+<h2 id="完整消息转发-Normal-Forwarding"><a href="#完整消息转发-Normal-Forwarding" class="headerlink" title="完整消息转发 Normal Forwarding"></a>完整消息转发 Normal Forwarding</h2><p>如果没有使用Fast Forwarding来消息转发，则唯一能做的就是启用<strong>完整的消息转发</strong>机制了.</p>
+<p>首先它会发送<code>-methodSignatureForSelector:</code>消息获得<strong>函数的参数</strong>和<strong>返回值类型</strong>。<br>如果-<code>methodSignatureForSelector:</code>返回 <code>nil</code> ，Runtime则会发出 <code>-doesNotRecognizeSelector:</code>消息，程序这时也就crash掉了，并抛出 <em>unrecognized selector sent to instance</em> 异常信息。<br>如果返回了一个函数签名，Runtime就会创建一个<code>NSInvocation</code>对象并发送 <code>-forwardInvocation:</code>消息给目标对象。</p>
+<p>实例：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#pragma mark - Normal Forwarding</span></span><br><span class="line">- (<span class="built_in">NSMethodSignature</span> *)methodSignatureForSelector:(SEL)aSelector</span><br><span class="line">&#123;</span><br><span class="line">    <span class="built_in">NSMethodSignature</span> *methodSignature = [<span class="keyword">super</span> methodSignatureForSelector:aSelector];</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> (!methodSignature) &#123;</span><br><span class="line">        methodSignature = [<span class="built_in">NSMethodSignature</span> signatureWithObjCTypes:<span class="string">"v@:*"</span>];</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> methodSignature;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)forwardInvocation:(<span class="built_in">NSInvocation</span> *)anInvocation</span><br><span class="line">&#123;</span><br><span class="line">    MessageForwarding *messageForwarding = [MessageForwarding new];</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> ([messageForwarding respondsToSelector:anInvocation.selector]) &#123;</span><br><span class="line">        [anInvocation invokeWithTarget:messageForwarding];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="三种方法的选择"><a href="#三种方法的选择" class="headerlink" title="三种方法的选择"></a>三种方法的选择</h2><p>Runtime提供三种方式来将原来的方法实现代替掉，那该怎样选择它们呢？</p>
+<ul>
+<li><p><strong>Method Resolution</strong>：由于Method Resolution不能像消息转发那样可以交给其他对象来处理，所以只适用于在<strong>原来的类</strong>中代替掉。</p>
+</li>
+<li><p><strong>Fast Forwarding</strong>：它可以将消息处理转发给<strong>其他对象</strong>，使用范围更广，不只是限于原来的对象。</p>
+</li>
+<li><p><strong>Normal Forwarding</strong>：它跟Fast Forwarding一样可以消息转发，但它能通过<code>NSInvocation</code>对象<strong>获取更多消息发送</strong>的信息，例如：target、selector、arguments和返回值等信息。</p>
+</li>
+</ul>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/configs/alipay-reward-image.JPG" alt="eternityi 支付宝">
+        <p>支付宝</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ios/" rel="tag"># ios</a>
+          
+            <a href="/tags/runtime/" rel="tag"># runtime</a>
+          
+            <a href="/tags/oc/" rel="tag"># oc</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/01/12/ios-runtime-advance-02/" rel="next" title="iOS RunTime Advance 02 (方法缓存详解)">
+                <i class="fa fa-chevron-left"></i> iOS RunTime Advance 02 (方法缓存详解)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/10/09/swift-algorithems-basic-01/" rel="prev" title="Swift 算法基础+实践 01">
+                Swift 算法基础+实践 01 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="gitalk-container">
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/avatar.png" alt="eternityi">
+            
+              <p class="site-author-name" itemprop="name">eternityi</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">4</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">8</span>
+                    <span class="site-state-item-name">标签</span>
+                  
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="https://github.com/eternityi" title="GitHub &rarr; https://github.com/eternityi" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="mailto:eternity.zheng@gmail.com" title="E-Mail &rarr; mailto:eternity.zheng@gmail.com" rel="noopener" target="_blank"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            </div>
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#消息转发"><span class="nav-number">1.</span> <span class="nav-text">消息转发</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#动态方法解析-Method-Resolution"><span class="nav-number">2.</span> <span class="nav-text">动态方法解析 Method Resolution</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#备用接收者-Fast-Forwarding"><span class="nav-number">3.</span> <span class="nav-text">备用接收者 Fast Forwarding</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#完整消息转发-Normal-Forwarding"><span class="nav-number">4.</span> <span class="nav-text">完整消息转发 Normal Forwarding</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三种方法的选择"><span class="nav-number">5.</span> <span class="nav-text">三种方法的选择</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2014 – <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">eternityi</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> v6.7.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    
+    
+  
+  <script color="0,0,255" opacity="0.5" zindex="-1" count="99" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.7.0"></script>
+
+  <script src="/js/src/motion.js?v=6.7.0"></script>
+
+
+
+  
+  
+
+  
+  <script src="/js/src/scrollspy.js?v=6.7.0"></script>
+<script src="/js/src/post-details.js?v=6.7.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.7.0"></script>
+
+
+
+  
+  
+    
+
+<script src="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+
+
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+
+
+<script src="//cdn.jsdelivr.net/npm/js-md5@0.7.3/src/md5.min.js"></script>
+
+<script>
+  var gitalk = new Gitalk({
+    clientID: 'cbfa8cc6c6d4e215dcee',
+    clientSecret: 'ee6586236b45fa7609f98d92c1da655a8c8f1ede',
+    repo: 'blog-comments',
+    owner: 'eternityi',
+    admin: ['eternityi'],
+    id: md5(location.pathname),
+    distractionFreeMode: 'true'
+  });
+  gitalk.render('gitalk-container');
+</script>
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  <style>
+    .copy-btn {
+      display: inline-block;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 20px;
+      color: #333;
+      white-space: nowrap;
+      vertical-align: middle;
+      cursor: pointer;
+      background-color: #eee;
+      background-image: linear-gradient(#fcfcfc, #eee);
+      border: 1px solid #d5d5d5;
+      border-radius: 3px;
+      user-select: none;
+      outline: 0;
+    }
+
+    .highlight-wrap .copy-btn {
+      transition: opacity .3s ease-in-out;
+      opacity: 0;
+      padding: 2px 6px;
+      position: absolute;
+      right: 4px;
+      top: 8px;
+    }
+
+    .highlight-wrap:hover .copy-btn,
+    .highlight-wrap .copy-btn:focus {
+      opacity: 1
+    }
+
+    .highlight-wrap {
+      position: relative;
+    }
+  </style>
+  <script>
+    $('.highlight').each(function (i, e) {
+      var $wrap = $('<div>').addClass('highlight-wrap');
+      $(e).after($wrap);
+      $wrap.append($('<button>').addClass('copy-btn').append('复制').on('click', function (e) {
+        var code = $(this).parent().find('.code').find('.line').map(function (i, e) {
+          return $(e).text();
+        }).toArray().join('\n');
+        var ta = document.createElement('textarea');
+        var range = document.createRange(); //For Chrome
+        var sel = window.getSelection(); //For Chrome
+        var yPosition = window.pageYOffset || document.documentElement.scrollTop;
+        ta.style.top = yPosition + 'px'; //Prevent page scroll
+        ta.style.position = 'absolute';
+        ta.style.opacity = '0';
+        ta.value = code;
+        ta.textContent = code; //For FireFox
+        ta.contentEditable = true;
+        ta.readOnly = false;
+        document.body.appendChild(ta);
+        range.selectNode(ta);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        ta.setSelectionRange(0, code.length);
+        var result = document.execCommand('copy');
+        
+          if (result) $(this).text('复制成功');
+          else $(this).text('复制失败');
+        
+        ta.blur(); //For iOS
+        $(this).blur();
+      })).on('mouseleave', function (e) {
+        var $b = $(this).find('.copy-btn');
+        setTimeout(function () {
+          $b.text('复制');
+        }, 300);
+      }).append(e);
+    })
+  </script>
+
+
+  
+
+</body>
+</html>
