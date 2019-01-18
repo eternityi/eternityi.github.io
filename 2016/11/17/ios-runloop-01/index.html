@@ -94,15 +94,21 @@
 
 
 
-  <meta name="keywords" content="ios,runloop,nstimer">
+  <meta name="description" content="RunLoop简介一般来说，一个线程只能执行一个任务，执行完就会退出，如果我们需要一种机制，让线程能随时处理时间但并不退出，那么 RunLoop 就是这样的一个机制。Runloop是事件接收和分发机制的一个实现。 RunLoop实际上是一个对象，这个对象在循环中用来处理程序运行过程中出现的各种事件（比如说触摸事件、UI刷新事件、定时器事件、Selector事件），从而保持程序的持续运行；而且在没有">
+<meta name="keywords" content="ios,runloop,nstimer">
 <meta property="og:type" content="article">
 <meta property="og:title" content="iOS RunLoop 原理总结 01">
 <meta property="og:url" content="https://eternityi.github.io/2016/11/17/ios-runloop-01/index.html">
 <meta property="og:site_name" content="App Development Club">
+<meta property="og:description" content="RunLoop简介一般来说，一个线程只能执行一个任务，执行完就会退出，如果我们需要一种机制，让线程能随时处理时间但并不退出，那么 RunLoop 就是这样的一个机制。Runloop是事件接收和分发机制的一个实现。 RunLoop实际上是一个对象，这个对象在循环中用来处理程序运行过程中出现的各种事件（比如说触摸事件、UI刷新事件、定时器事件、Selector事件），从而保持程序的持续运行；而且在没有">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-01-17T08:19:59.100Z">
+<meta property="og:image" content="https://eternityi.github.io/2016/11/17/ios-runloop-01/runloop_implement_principle.png">
+<meta property="og:image" content="https://eternityi.github.io/2016/11/17/ios-runloop-01/main_thread_and_worker_thread.jpg">
+<meta property="og:updated_time" content="2019-01-18T08:10:09.541Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="iOS RunLoop 原理总结 01">
+<meta name="twitter:description" content="RunLoop简介一般来说，一个线程只能执行一个任务，执行完就会退出，如果我们需要一种机制，让线程能随时处理时间但并不退出，那么 RunLoop 就是这样的一个机制。Runloop是事件接收和分发机制的一个实现。 RunLoop实际上是一个对象，这个对象在循环中用来处理程序运行过程中出现的各种事件（比如说触摸事件、UI刷新事件、定时器事件、Selector事件），从而保持程序的持续运行；而且在没有">
+<meta name="twitter:image" content="https://eternityi.github.io/2016/11/17/ios-runloop-01/runloop_implement_principle.png">
 
 
 
@@ -382,7 +388,41 @@
       
 
       
-        
+        <h2 id="RunLoop简介"><a href="#RunLoop简介" class="headerlink" title="RunLoop简介"></a>RunLoop简介</h2><p>一般来说，一个线程只能执行一个任务，执行完就会退出，如果我们需要一种机制，让线程能随时处理时间但并不退出，那么 <strong>RunLoop</strong> 就是这样的一个机制。<strong>Runloop</strong>是事件接收和分发机制的一个实现。</p>
+<p><strong>RunLoop实际上是一个对象</strong>，这个对象在循环中用来处理程序运行过程中出现的各种事件（比如说触摸事件、UI刷新事件、定时器事件、Selector事件），从而保持程序的持续运行；而且在没有事件处理的时候，会进入睡眠模式，从而节省CPU资源，提高程序性能。</p>
+<h2 id="RunLoop-基本作用"><a href="#RunLoop-基本作用" class="headerlink" title="RunLoop 基本作用"></a>RunLoop 基本作用</h2><ol>
+<li><strong>保持程序持续运行</strong>，程序一启动就会开一个主线程，主线程一开起来就会跑一个主线程对应的RunLoop,RunLoop保证主线程不会被销毁，也就保证了程序的持续运行</li>
+<li><strong>处理App中的各种事件</strong>（比如：触摸事件，定时器事件，Selector事件等）</li>
+<li><strong>节省CPU资源，提高程序性能</strong>，程序运行起来时，当什么操作都没有做的时候，RunLoop就告诉CPU，现在没有事情做，我要去休息，这时CPU就会将其资源释放出来去做其他的事情，当有事情做的时候RunLoop就会立马起来去执行对应任务。</li>
+</ol>
+<p>Apple提供了一个RunLoop运行原理的示意图：</p>
+<img src="/2016/11/17/ios-runloop-01/runloop_implement_principle.png" title="RunLoop">
+<img src="/2016/11/17/ios-runloop-01/main_thread_and_worker_thread.jpg" title="线程间的关系">
+<p>RunLoop在循环过程中，当接收到 <code>Input sources</code> 或者 <code>Timer sources</code> 时就会交给对应的处理方去处理。当没有事件消息传入的时候，RunLoop就休息了。</p>
+<h2 id="主线程上-RunLoop-开启"><a href="#主线程上-RunLoop-开启" class="headerlink" title="主线程上 RunLoop 开启"></a>主线程上 RunLoop 开启</h2><p>大家应该都知道iOS程序的入口当为main函数，UIApplicationMain函数内启动了Runloop，程序不会马上退出，而是保持运行状态。因此每一个应用必须要有一个runloop，<br>我们知道主线程一开起来，就会跑一个和主线程对应的RunLoop，那么RunLoop一定是在程序的入口main函数中开启。</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> main(<span class="keyword">int</span> argc, <span class="keyword">char</span> * argv[]) &#123;</span><br><span class="line">    <span class="keyword">@autoreleasepool</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="built_in">UIApplicationMain</span>(argc, argv, <span class="literal">nil</span>, <span class="built_in">NSStringFromClass</span>([AppDelegate <span class="keyword">class</span>]));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>进入上面main函数返回的UIApplicationMain函数：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">UIKIT_EXTERN</span> <span class="keyword">int</span> <span class="built_in">UIApplicationMain</span>(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[], <span class="built_in">NSString</span> * __<span class="keyword">nullable</span> principalClassName, <span class="built_in">NSString</span> * __<span class="keyword">nullable</span> delegateClassName);</span><br></pre></td></tr></table></figure>
+<p>我们发现它返回的是一个int类型的值，那么我们对main函数做一些修改：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> main(<span class="keyword">int</span> argc, <span class="keyword">char</span> * argv[]) &#123;</span><br><span class="line">    <span class="keyword">@autoreleasepool</span> &#123;</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@"开始"</span>);</span><br><span class="line">        <span class="keyword">int</span> re = <span class="built_in">UIApplicationMain</span>(argc, argv, <span class="literal">nil</span>, <span class="built_in">NSStringFromClass</span>([AppDelegate <span class="keyword">class</span>]));</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@"结束"</span>);</span><br><span class="line">        <span class="keyword">return</span> re;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行程序，我们发现只会打印开始，并不会打印结束，这说明在<code>UIApplicationMain</code>函数中，开启了一个和主线程相关的RunLoop，导致<code>UIApplicationMain</code>不会返回，一直在运行中，也就保证了程序的持续运行。</p>
+<h2 id="RunLoop-源码"><a href="#RunLoop-源码" class="headerlink" title="RunLoop 源码"></a>RunLoop 源码</h2><p>RunLoop 实际上是一个对象，这个对象管理了其需要处理的事件和消息，并提供了一个入口函数来执行 <strong>Event Loop</strong> 的逻辑。线程执行了这个函数后，函数会一直处于 <strong>“接受消息-&gt;等待-&gt;处理” </strong>的循环中，直到这个循环结束（比如传入 quit 的消息）。</p>
+<p>NSRunLoop 是基于 CFRunLoopRef 的封装，提供了面向对象的 API，但是这些 API 不是线程安全的。<br><strong><code>CFRunLoopRef</code></strong> 是在 <strong>CoreFoundation</strong> 框架内的，它提供了纯 C 函数的 API，所有这些 API 都是线程安全的。CFRunLoopRef代码是开源的， <a href="https://opensource.apple.com/tarballs/CF/" target="_blank" rel="noopener">https://opensource.apple.com/tarballs/CF/</a> 可以下载最新的源码。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 用DefaultMode启动</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">CFRunLoopRun</span><span class="params">(<span class="keyword">void</span>)</span> </span>&#123;   <span class="comment">/* DOES CALLOUT */</span></span><br><span class="line">    <span class="keyword">int32_t</span> result;</span><br><span class="line">    <span class="keyword">do</span> &#123;</span><br><span class="line">        result = CFRunLoopRunSpecific(CFRunLoopGetCurrent(), kCFRunLoopDefaultMode, <span class="number">1.0e10</span>, <span class="literal">false</span>);</span><br><span class="line">        CHECK_FOR_FORK();</span><br><span class="line">    &#125; <span class="keyword">while</span> (kCFRunLoopRunStopped != result &amp;&amp; kCFRunLoopRunFinished != result);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们发现RunLoop确实是<code>do while</code>通过判断result的值实现的。因此，我们可以把RunLoop看成一个死循环。如果没有RunLoop，<code>UIApplicationMain</code>函数执行完毕之后将直接返回，也就没有程序持续运行一说了。</p>
+<h2 id="获取RunLoop对象"><a href="#获取RunLoop对象" class="headerlink" title="获取RunLoop对象"></a>获取RunLoop对象</h2><p>类似获取线程的方法：<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//获取 main thread 的方法：</span></span><br><span class="line">pthread_main_thread_np() ;</span><br><span class="line">[<span class="built_in">NSThread</span> mainThread];</span><br><span class="line"></span><br><span class="line"><span class="comment">//获取当前线程的方法：</span></span><br><span class="line">pthread_self();</span><br><span class="line">[<span class="built_in">NSThread</span> currentThread]</span><br></pre></td></tr></table></figure></p>
+<p>获取对应线程上的RunLoop的方法：<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Foundation</span><br><span class="line">[<span class="built_in">NSRunLoop</span> currentRunLoop]; <span class="comment">// 获得当前线程的RunLoop对象</span></span><br><span class="line">[<span class="built_in">NSRunLoop</span> mainRunLoop]; <span class="comment">// 获得主线程的RunLoop对象</span></span><br><span class="line"></span><br><span class="line">Core Foundation</span><br><span class="line"><span class="built_in">CFRunLoopGetCurrent</span>(); <span class="comment">// 获得当前线程的RunLoop对象</span></span><br><span class="line"><span class="built_in">CFRunLoopGetMain</span>(); <span class="comment">// 获得主线程的RunLoop对象</span></span><br></pre></td></tr></table></figure></p>
+<p>从CoreFoundation框架中的这两个方法的源码：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 拿到当前Runloop 调用_CFRunLoopGet0</span></span><br><span class="line"><span class="function">CFRunLoopRef <span class="title">CFRunLoopGetCurrent</span><span class="params">(<span class="keyword">void</span>)</span> </span>&#123;</span><br><span class="line">    CHECK_FOR_FORK();</span><br><span class="line">    CFRunLoopRef rl = (CFRunLoopRef)_CFGetTSD(__CFTSDKeyRunLoop);</span><br><span class="line">    <span class="keyword">if</span> (rl) <span class="keyword">return</span> rl;</span><br><span class="line">    <span class="keyword">return</span> _CFRunLoopGet0(pthread_self());</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 查看_CFRunLoopGet0方法内部</span></span><br><span class="line">CF_EXPORT CFRunLoopRef _CFRunLoopGet0(<span class="keyword">pthread_t</span> t) &#123;</span><br><span class="line">    <span class="keyword">if</span> (pthread_equal(t, kNilPthreadT)) &#123;</span><br><span class="line">    t = pthread_main_thread_np();</span><br><span class="line">    &#125;</span><br><span class="line">    __CFLock(&amp;loopsLock);</span><br><span class="line">    <span class="keyword">if</span> (!__CFRunLoops) &#123;</span><br><span class="line">        __CFUnlock(&amp;loopsLock);</span><br><span class="line">    CFMutableDictionaryRef dict = CFDictionaryCreateMutable(kCFAllocatorSystemDefault, <span class="number">0</span>, <span class="literal">NULL</span>, &amp;kCFTypeDictionaryValueCallBacks);</span><br><span class="line">    <span class="comment">// 根据传入的主线程获取主线程对应的RunLoop</span></span><br><span class="line">    CFRunLoopRef mainLoop = __CFRunLoopCreate(pthread_main_thread_np());</span><br><span class="line">    <span class="comment">// 保存主线程 将主线程-key和RunLoop-Value保存到字典中</span></span><br><span class="line">    CFDictionarySetValue(dict, pthreadPointer(pthread_main_thread_np()), mainLoop);</span><br><span class="line">    <span class="keyword">if</span> (!OSAtomicCompareAndSwapPtrBarrier(<span class="literal">NULL</span>, dict, (<span class="keyword">void</span> * <span class="keyword">volatile</span> *)&amp;__CFRunLoops)) &#123;</span><br><span class="line">        CFRelease(dict);</span><br><span class="line">    &#125;</span><br><span class="line">    CFRelease(mainLoop);</span><br><span class="line">        __CFLock(&amp;loopsLock);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 从字典里面拿，将线程作为key从字典里获取一个loop</span></span><br><span class="line">    CFRunLoopRef loop = (CFRunLoopRef)CFDictionaryGetValue(__CFRunLoops, pthreadPointer(t));</span><br><span class="line">    __CFUnlock(&amp;loopsLock);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 如果loop为空，则创建一个新的loop，所以runloop会在第一次获取的时候创建</span></span><br><span class="line">    <span class="keyword">if</span> (!loop) &#123;  </span><br><span class="line">    CFRunLoopRef newLoop = __CFRunLoopCreate(t);</span><br><span class="line">        __CFLock(&amp;loopsLock);</span><br><span class="line">    loop = (CFRunLoopRef)CFDictionaryGetValue(__CFRunLoops, pthreadPointer(t));</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 创建好之后，以线程为key runloop为value，一对一存储在字典中，下次获取的时候，则直接返回字典内的runloop</span></span><br><span class="line">    <span class="keyword">if</span> (!loop) &#123; </span><br><span class="line">        CFDictionarySetValue(__CFRunLoops, pthreadPointer(t), newLoop);</span><br><span class="line">        loop = newLoop;</span><br><span class="line">    &#125;</span><br><span class="line">        <span class="comment">// don't release run loops inside the loopsLock, because CFRunLoopDeallocate may end up taking it</span></span><br><span class="line">        __CFUnlock(&amp;loopsLock);</span><br><span class="line">    CFRelease(newLoop);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (pthread_equal(t, pthread_self())) &#123;</span><br><span class="line">        _CFSetTSD(__CFTSDKeyRunLoop, (<span class="keyword">void</span> *)loop, <span class="literal">NULL</span>);</span><br><span class="line">        <span class="keyword">if</span> (<span class="number">0</span> == _CFGetTSD(__CFTSDKeyRunLoopCntr)) &#123;</span><br><span class="line">            _CFSetTSD(__CFTSDKeyRunLoopCntr, (<span class="keyword">void</span> *)(PTHREAD_DESTRUCTOR_ITERATIONS<span class="number">-1</span>), (<span class="keyword">void</span> (*)(<span class="keyword">void</span> *))__CFFinalizeRunLoop);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> loop;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从上面的代码可以看出，获取RunLoop时需要传<code>pthread_t t</code>作为参数，线程和 RunLoop 之间是一一对应的，其关系是保存在一个全局的 <code>Dictionary</code> 里。<br>线程刚创建时并没有 RunLoop，如果你不主动获取，那它一直都不会有。RunLoop 的创建是发生在第一次获取时，RunLoop 的销毁是发生在线程结束时。你只能在一个线程的内部获取其 RunLoop（主线程除外）。</p>
+<h2 id="RunLoop和线程间的关系"><a href="#RunLoop和线程间的关系" class="headerlink" title="RunLoop和线程间的关系"></a>RunLoop和线程间的关系</h2><ol>
+<li>每条线程都有唯一的一个与之对应的RunLoop对象；</li>
+<li>RunLoop保存在一个全局的Dictionary里，线程作为key，RunLoop作为value；</li>
+<li>主线程的RunLoop已经自动创建好了，子线程的RunLoop需要主动创建；</li>
+<li><strong>RunLoop 的创建是发生在第一次获取时，RunLoop 的销毁是发生在线程结束时。</strong></li>
+</ol>
+<p>只能在一个线程的内部获取其 RunLoop（主线程除外）。</p>
+
       
     </div>
 
@@ -507,8 +547,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <div class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <div class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
             
@@ -617,6 +666,23 @@
         </div>
       </div>
 
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#RunLoop简介"><span class="nav-number">1.</span> <span class="nav-text">RunLoop简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RunLoop-基本作用"><span class="nav-number">2.</span> <span class="nav-text">RunLoop 基本作用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#主线程上-RunLoop-开启"><span class="nav-number">3.</span> <span class="nav-text">主线程上 RunLoop 开启</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RunLoop-源码"><span class="nav-number">4.</span> <span class="nav-text">RunLoop 源码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#获取RunLoop对象"><span class="nav-number">5.</span> <span class="nav-text">获取RunLoop对象</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RunLoop和线程间的关系"><span class="nav-number">6.</span> <span class="nav-text">RunLoop和线程间的关系</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
       
 
       
